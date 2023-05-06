@@ -1,0 +1,239 @@
+function update_all_git_repo() {
+    CUR_PWD=$(pwd);
+    CUR_DIRS=(*/)
+	for i in ${CUR_DIRS[@]};
+	do
+		cd $i;
+        CUR_BRANCH=$(git branch --show-current);
+		echo -n "#### [INFO] we use this dir $i";
+		git fetch;
+		git stash || true;
+		git checkout develop || true;
+		git pull origin develop || true;
+        git checkout $CUR_BRANCH;
+		git stash pop || true;
+		cd ..;
+	done;
+    cd $CUR_PWD;
+}
+
+function git_cfg_custom() {
+	echo -n "Git config global or local repo"
+	read IS_GIT_GLOBAL
+	if [ ! -z "$IS_GIT_GLOBAL" ]
+	then
+		GIT_GLOBAL_PARAM=--global
+	fi
+	echo -n "Enter the name of Company you want to config (leave Empty if there is personal): "
+	read COMPANY
+	case $COMPANY in
+		"B13" | "b13" | "b13-technology")
+			echo -n "git config for B13";
+			GIT_TARGET_USR=${GIT_FORMAL_NAME}
+			GIT_TARGET_EMAIL=${GIT_B13_EMAIL}
+			;;
+		"Pyco" | "Pycogroup" | "PYCO")
+			echo -n "git config for PYCO";
+			GIT_TARGET_USR=${GIT_FORMAL_NAME}
+			GIT_TARGET_EMAIL=${GIT_PYCO_EMAIL}
+			;;
+		"Michael Page" | "MCP")
+			echo -n "git config for MCP";
+			GIT_TARGET_USR=${GIT_FORMAL_NAME}
+			GIT_TARGET_EMAIL=${GIT_MC_EMAIL}
+			;;
+		*)
+			echo -n "Use Personal Git configuration"
+			GIT_TARGET_USR=${GIT_PERSONAL_NAME}
+			GIT_TARGET_EMAIL=${GIT_PERSONAL_EMAIL}
+			;;
+	esac
+	echo -n "${GIT_TARGET_USR} - ${GIT_TARGET_EMAIL} with Mode: ${GIT_GLOBAL_PARAM}"
+	git config ${GIT_GLOBAL_PARAM} user.name "${GIT_TARGET_USR}"
+	git config ${GIT_GLOBAL_PARAM} user.email "${GIT_TARGET_EMAIL}"
+	unset GIT_GLOBAL_PARAM
+	return 0;
+}
+
+function accessSubstraktUAT() {
+	cd;
+	ssh -i subtrakt-2way.pem ubuntu@$1
+}
+
+function backupConfigLinux() {
+    CUR_PWD=${pwd};
+    cd;
+	echo -n "#### [INFO] Copy .ssh key pub and private";
+	rsync -av --delete ".ssh/" "${BACKUP_DIR_PERSONAL}/personal-laptop/.ssh/";
+	rsync -av --delete ".config/nvim" "${BACKUP_DIR_PERSONAL}/personal-laptop/nvim";
+    yes | cp -a "custom_shell/." "${BACKUP_DIR_PERSONAL}/";
+	# yes | cp -i "~/.config/Code/User/**/*.json" "${BACKUP_DIR_PERSONAL}/personal-laptop/vscode/"
+	pwd;
+	for i in .profile .zshrc .ideavimrc .p10k.zsh .zprofile .gitignore_global .bashrc .viminfo .gitconfig .bash_profile .ideavimrc .vimrc .profile_functions example.env;
+	do
+		echo -n "#### [INFO] do copy file ${i} \n";
+		yes | cp -i "${i}" "${BACKUP_DIR_PERSONAL}/personal-laptop/${i}";
+	done;
+	echo -n "################################################################ \n"
+	echo -n "#### [INFO] Copy successfully \n";
+	cd ${BACKUP_DIR_PERSONAL};
+	pwd;
+	CUR_DATE=$(date);
+	echo -n "Content: $1 - Commit to git on ${CUR_DATE}"
+	git status;
+	git add .;
+	git commit -m "Update config on ${CUR_DATE}";
+	git push origin master;
+	git push bitbucket master;
+    cd $CUR_PWD;
+	return 0;
+}
+
+function balboa_pull () {
+	cd_balboa;
+	update_all_git_repo;
+    return 0;
+}
+
+function balboa_build() {
+	cd_balboa;
+	BALBOA_DIRS=(*/)
+	for i in ${BALBOA_DIRS[@]};
+	do
+		cd $i;
+		echo "$i";
+		mvn clean validate -U || true;
+		cd ..;
+	done;
+	return 0;
+}
+
+function balboa_master() {
+	cd_balboa;
+	BALBOA_DIRS=(*/)
+	for i in ${BALBOA_DIRS[@]};
+	do
+		cd $i;
+		echo "#### [INFO] we use this dir $i";
+		git checkout master;
+		git pull origin master || true;
+		#mvn clean validate -U || true;
+		cd ..;
+	done;
+	return 0;
+}
+
+function pok_update_git() {
+	cd ~/Project/PayOk/;
+	update_all_git_repo;
+    return 0;
+}
+
+function omz_update_custom_plugin() {
+    CUR_PWD=$(pwd);
+	cd;
+	cd .oh-my-zsh/custom/
+	Z_CUSTOM_DIRS=(*/);
+	for i in ${Z_CUSTOM_DIRS[@]};
+	do
+		echo -n "#### [INFO] we use this dir $i";
+		cd $i;
+		Z_SUB_CUSTOM_DIRS=(*/);
+		for j in ${Z_SUB_CUSTOM_DIRS};
+		do
+			echo -n "#### [INFO] we use this dir $j";
+			cd $j;
+			git pull origin master || true;
+			cd ..;
+		done;
+		cd ..;
+	done;
+	omz update;
+    cd $CUR_PWD;
+	return 0;
+}
+
+function backup_infras() {
+    CUR_PWD=$(pwd);
+    cd_infras;
+	CUR_DATE=$(date);
+	echo -n "Commit to git on ${CUR_DATE}"
+	git status;
+	git add .;
+	git commit -m "Content: $1 Update infras on ${CUR_DATE}";
+	git push origin master;
+	git push bitbucket master;
+    cd $CUR_PWD;
+	return 0;
+}
+
+function docker_start_mongo() {
+	cd ~/Project/playground/infrastructure/mongodb;
+	docker-compose up -d;
+}
+
+function git_config_alias() {
+	git config --global alias.fastpull "pull --rebase ${1} ${2} --autostash"
+	git config --global alias.fast-reset-soft "reset --soft HEAD~1"
+	git config --global alias.fastlog "log --oneline --graph"
+	git config --global alias.mark-unchange "update-index --assume-unchanged ${1}"
+	git config --global alias.mark-change "update-index --no-assume-unchanged ${1}"
+    git config --global alias.fastpush "push -f origin $(git branch --show-current)"
+}
+
+function compile_cpp() {
+    rm -rf temp_file;
+    g++ -std=c++14 -o temp_file ${1};
+    ./temp_file;
+    rm -rf temp_file;
+}
+
+function use_nvm_system_default {
+    nvm run system --version
+}
+
+function zombie_kickass() {
+    ZOMBIE_LIST=$(list_all_zombie | grep -Eo '[0-9]{1,}');
+    echo "Found some damn Zombie here $ZOMBIE_LIST \n";
+    for i in ${ZOMBIE_LIST[@]};
+    do
+        kill -s SIGCHLD $i;
+    done;
+    echo "Zombie kick ass completed";
+}
+
+function list_all_zombie() {
+    ps -A -ostat,pid,ppid | grep -e '[zZ]'
+}
+
+function map_caplock_as_esc() {
+    setxkbmap -option caps:escape
+}
+
+function restore_caplock_as_default() {
+    setxkbmap -option
+}
+
+function cleanup_all_node_module_dir() {
+    CUR_DIRS=(*/)
+	for i in ${CUR_DIRS[@]};
+	do
+		cd $i;
+		echo "#### [INFO] we use this dir $PWD \n";
+		if [ -d "$PWD/node_modules" ]
+        then
+            rm -rf "node_modules";
+        fi
+        cd ..;
+	done;
+}
+
+function initTelegramToken() {
+    TELEGRAM_TOKEN=2046177847:AAHdKxI_az89uxnC2tzsHG08evZdG77aASo
+}
+
+function ggud() {
+    git stash;
+    git pull origin develop;
+    git stash pop;
+}

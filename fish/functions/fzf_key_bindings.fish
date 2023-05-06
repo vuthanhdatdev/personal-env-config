@@ -1,0 +1,1 @@
+/home/vuthanhdat/.fzf/shell/key-bindings.fish
